@@ -1,0 +1,6 @@
+services:
+  memcached:
+    image: memcached
+    ports:
+      - 3001:3001
+    command: memcached -p 3001
