@@ -2,5 +2,5 @@ services:
   memcached:
     image: memcached
     ports:
-      - 3001:3001
-    command: memcached -p 3001
+      - 4001:4001
+    command: memcached -p 4001

@@ -1,11 +1,20 @@
 import express from "express";
-import { scrapeWorkshop, WorkshopPageUrl } from "./scraper";
 import Memcached from "memcached";
+import cors from "cors";
+
+import { scrapeWorkshop, WorkshopPageUrl } from "./scraper";
+
+const memcachedClient = new Memcached("127.0.0.1:4001");
+
+const corsOptions = {
+	origin: "http://localhost:3000",
+	optionsSuccessStatus: 200,
+};
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
-const memcachedClient = new Memcached("127.0.0.1:3001");
+app.use(cors(corsOptions));
 
 app.get("/scrape", async (_req, res) => {
 	try {
@@ -16,6 +25,7 @@ app.get("/scrape", async (_req, res) => {
 			}
 
 			if (data) {
+				console.log("Sending from cache");
 				res.json(JSON.parse(data));
 				return;
 			}
@@ -23,12 +33,13 @@ app.get("/scrape", async (_req, res) => {
 			scrapeWorkshop(
 				new WorkshopPageUrl({ appid: "730", page: 1 }),
 			).then((items) => {
-				memcachedClient.set("workshop:items", JSON.stringify(items), 60 * 5, (err, result) => {
+				memcachedClient.set("workshop:items", JSON.stringify(items), 60 * 30, (err, result) => {
 					if (err) {
 						console.error("Error: Could not cache res");
 						console.error(err);
 					}
 				});
+				console.log("Sending data");
 				res.json(items);
 				return;
 			});

@@ -1,6 +1,6 @@
 import { URL } from "node:url";
 import puppeteer from "puppeteer";
-import { scrapeFullInfo, type WorkshopItemShort } from "./WorkshopItem";
+import { scrapeFullInfo, WorkshopItem, type WorkshopItemShort } from "./WorkshopItem";
 
 export class WorkshopPageUrl {
 	private appid: string;
@@ -31,6 +31,7 @@ export class WorkshopPageUrl {
 
 export async function scrapeWorkshop(url: WorkshopPageUrl) {
 	const browser = await puppeteer.launch({
+		timeout: 1_000 * 60 * 2,
 		defaultViewport: {
 			width: 1920,
 			height: 1080,
@@ -87,12 +88,17 @@ export async function scrapeWorkshop(url: WorkshopPageUrl) {
 		}
 		return results;
 	});
+	page.close();
 
-	const temp = await Promise.all(
-		items.map((item) => scrapeFullInfo(browser, item)),
-	);
+	const wholeItems = new Array<WorkshopItem>();
+	for (const item of items) {
+		wholeItems.push(await scrapeFullInfo(browser, item));
+
+	}
+
+	console.log("List scraped");
 
 	await browser.close();
 
-	return temp;
+	return wholeItems;
 }
