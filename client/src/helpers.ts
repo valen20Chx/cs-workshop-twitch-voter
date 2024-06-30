@@ -1,4 +1,5 @@
-import { Accessor } from "solid-js";
+import type { Accessor } from "solid-js";
 
-export const isDef = <T extends any>(accessor: Accessor<T | undefined | null>): accessor is Accessor<T> =>
-  accessor() !== undefined && accessor() !== null;
+export const isDef = <T>(
+	accessor: Accessor<T | undefined | null>,
+): accessor is Accessor<T> => accessor() !== undefined && accessor() !== null;

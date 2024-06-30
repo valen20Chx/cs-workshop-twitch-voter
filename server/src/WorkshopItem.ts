@@ -45,7 +45,6 @@ export async function scrapeFullInfo(
 	await page.goto(shortItem.link);
 
 	try {
-
 		const itemRaw = await page.evaluate((shortItem): WorkshopItemRaw => {
 			const imagesSelector = 'div[id^="thumb_screenshot"] > img';
 			const imagesElements = document.querySelectorAll(imagesSelector);
@@ -58,7 +57,7 @@ export async function scrapeFullInfo(
 					return arr;
 				}, []);
 
-			const singleImageSelector = 'img#previewImage';
+			const singleImageSelector = "img#previewImage";
 			const singleImageElement = document.querySelector(singleImageSelector);
 			const singleImageSrc = singleImageElement?.getAttribute("src");
 
@@ -67,7 +66,9 @@ export async function scrapeFullInfo(
 			}
 
 			if (!imagesSrcs.length) {
-				throw new Error(`No images found (${shortItem.title} : ${shortItem.link})`);
+				throw new Error(
+					`No images found (${shortItem.title} : ${shortItem.link})`,
+				);
 			}
 
 			const authorImgElement = document.querySelector(
@@ -112,7 +113,7 @@ export async function scrapeFullInfo(
 			};
 		}, shortItem);
 
-		const timeSpentScraping = (new Date()).getTime() - startTime.getTime();
+		const timeSpentScraping = new Date().getTime() - startTime.getTime();
 
 		console.log(`Scraped ${shortItem.title}: ${timeSpentScraping} ms`);
 

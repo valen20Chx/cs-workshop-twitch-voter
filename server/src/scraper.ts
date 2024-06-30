@@ -1,6 +1,10 @@
 import { URL } from "node:url";
 import puppeteer from "puppeteer";
-import { scrapeFullInfo, WorkshopItem, type WorkshopItemShort } from "./WorkshopItem";
+import {
+	scrapeFullInfo,
+	type WorkshopItem,
+	type WorkshopItemShort,
+} from "./WorkshopItem";
 
 export class WorkshopPageUrl {
 	private appid: string;
@@ -93,7 +97,6 @@ export async function scrapeWorkshop(url: WorkshopPageUrl) {
 	const wholeItems = new Array<WorkshopItem>();
 	for (const item of items) {
 		wholeItems.push(await scrapeFullInfo(browser, item));
-
 	}
 
 	console.log("List scraped");

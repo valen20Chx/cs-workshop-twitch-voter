@@ -6,9 +6,10 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node-dev src/index.ts",
-    "fix:check": "npx @biomejs/biome check",
-    "fix:lint": "npx @biomejs/biome lint --write src/*",
-    "fix:format": "npx @biomejs/biome format --write src/*"
+    "fix:lint": "npx @biomejs/biome lint src/*",
+    "fix:format": "npx @biomejs/biome format src/*",
+    "fix:lint:apply": "npx @biomejs/biome lint --write src/*",
+    "fix:format:apply": "npx @biomejs/biome format --write src/*"
   },
   "keywords": [],
   "author": "",

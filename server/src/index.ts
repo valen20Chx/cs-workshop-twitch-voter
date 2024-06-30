@@ -30,19 +30,24 @@ app.get("/scrape", async (_req, res) => {
 				return;
 			}
 
-			scrapeWorkshop(
-				new WorkshopPageUrl({ appid: "730", page: 1 }),
-			).then((items) => {
-				memcachedClient.set("workshop:items", JSON.stringify(items), 60 * 30, (err, result) => {
-					if (err) {
-						console.error("Error: Could not cache res");
-						console.error(err);
-					}
-				});
-				console.log("Sending data");
-				res.json(items);
-				return;
-			});
+			scrapeWorkshop(new WorkshopPageUrl({ appid: "730", page: 1 })).then(
+				(items) => {
+					memcachedClient.set(
+						"workshop:items",
+						JSON.stringify(items),
+						60 * 30,
+						(err, result) => {
+							if (err) {
+								console.error("Error: Could not cache res");
+								console.error(err);
+							}
+						},
+					);
+					console.log("Sending data");
+					res.json(items);
+					return;
+				},
+			);
 		});
 	} catch (error) {
 		console.error(error);
