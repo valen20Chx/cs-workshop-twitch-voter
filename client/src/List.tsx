@@ -7,6 +7,9 @@ import {
 	type Setter,
 	type Component,
 } from "solid-js";
+
+import type tmi from "tmi.js";
+
 import Item, { type IItem } from "./Item";
 import { isDef } from "./helpers";
 
@@ -30,7 +33,7 @@ const randomSet = (props: {
 	}
 };
 
-const List: Component = () => {
+const List: Component<{ client: tmi.Client }> = (props) => {
 	const [completed, setCompleted] = createSignal(false);
 
 	const [pickedItem, setPickedItem] = createSignal<IItem | undefined>();
@@ -47,6 +50,7 @@ const List: Component = () => {
 		return [];
 	});
 
+	// Slideshow
 	createEffect(() => {
 		if (!items()) return;
 
@@ -80,7 +84,7 @@ const List: Component = () => {
 					<p class="text-center">Loading...</p>
 				</div>
 			)}
-			{isDef(pickedItem) && <Item item={pickedItem()} />}
+			{isDef(pickedItem) && <Item item={pickedItem()} client={props.client} />}
 		</div>
 	);
 };

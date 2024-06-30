@@ -1,10 +1,16 @@
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	onCleanup,
 	type Component,
 } from "solid-js";
+
 import { format } from "date-fns";
+import type tmi from "tmi.js";
+
+import { getClosestMatchingQuality, type Qualities } from "./Qualities";
+import VoteCount from "./VoteCount";
 
 const formatDate = (dateStr: string): string => {
 	return format(dateStr, "yyyy-MM-dd");
@@ -24,10 +30,39 @@ export interface IItem {
 	imagesSrcs: string[];
 }
 
-const Item: Component<{ item: IItem }> = (props) => {
+const Item: Component<{ item: IItem, client: tmi.Client }> = (props) => {
 	const [lastLink, setLastLink] = createSignal<string | undefined>(undefined);
 	const [currentImageDisplayed, setCurrentImageDisplayed] = createSignal(1);
+	const [votes, setVotes] = createSignal<Record<keyof typeof Qualities, number>>({
+		Consumer_grade: 0,
+		Industrial_grade: 0,
+		Mil_spec: 0,
+		Restricted: 0,
+		Classified: 0,
+		Covert: 0,
+	});
 
+	const maxVote = createMemo(() => {
+		return Math.max(...Object.values(votes()))
+	});
+
+	// Chat
+	createEffect(() => {
+		props.client.on("message", (_channel, _userState, message, _client) => {
+			const chatWords = message.toLowerCase().split(" ");
+
+			const closestMatch = getClosestMatchingQuality(chatWords);
+
+			if (closestMatch) {
+				setVotes({
+					...votes(),
+					[closestMatch]: votes()[closestMatch] + 1,
+				});
+			}
+		});
+	});
+
+	// Slide show
 	createEffect(() => {
 		const sliderEle = document.getElementById("slider");
 		if (lastLink() === props.item.link) {
@@ -36,8 +71,6 @@ const Item: Component<{ item: IItem }> = (props) => {
 			let index = 0;
 
 			if (sliderEle) {
-				console.log("SetInterval");
-
 				interval = setInterval(() => {
 					const imagesEles = document.querySelectorAll("#slider img");
 					index = (index + 1) % imagesEles.length;
@@ -77,12 +110,12 @@ const Item: Component<{ item: IItem }> = (props) => {
 						/>
 					))}
 				</div>
-			</div>
 
-			<div>
-				<p>
-					{currentImageDisplayed()} / {props.item.imagesSrcs.length}
-				</p>
+				<div class="p-2 z-10 absolute bottom-0 right-0">
+					<p>
+						{currentImageDisplayed()} / {props.item.imagesSrcs.length}
+					</p>
+				</div>
 			</div>
 
 			<div class="p-2 flex gap-4 w-full">
@@ -95,7 +128,7 @@ const Item: Component<{ item: IItem }> = (props) => {
 					</p>
 				</div>
 
-				<div>
+				<div class="w-52">
 					<p class="font-bold">Details</p>
 					<p>
 						Posted:{" "}
@@ -105,6 +138,11 @@ const Item: Component<{ item: IItem }> = (props) => {
 						Updated:{" "}
 						<span class="font-bold">{formatDate(props.item.updatedOn)}</span>
 					</p>
+				</div>
+
+				<div class="w-full">
+					<p class="font-bold">Votes (Write in chat to vote)</p>
+					<VoteCount votes={votes()} maxVote={maxVote()} />
 				</div>
 			</div>
 		</div>
