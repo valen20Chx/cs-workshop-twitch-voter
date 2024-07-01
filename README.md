@@ -1,6 +1,9 @@
 # CS (Counter-Strike) Workshop Twitch Voter
 
 Preview and vote on trending workshop items with your twitch chat.
+![Screenshot 2024-07-01 033314](https://github.com/valen20Chx/cs-workshop-twitch-voter/assets/33943799/d9dea2f9-2592-4e28-906f-5f7917f11ada)
+![Screenshot 2024-07-01 033606](https://github.com/valen20Chx/cs-workshop-twitch-voter/assets/33943799/ca5b0185-9895-4280-ac77-e49b278f2a98)
+
 
 # Stack
 ## Front
@@ -9,6 +12,7 @@ Tailwind
 
 ## Back (Unused)
 Node (at least v18.19.0, honestly this app is so simple it will surely work on older versions.)
+
 express
 puppeteer
 
