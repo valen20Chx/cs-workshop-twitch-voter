@@ -21,9 +21,6 @@ const App: Component = () => {
 		}
 
 		const client = new tmi.Client({
-			options: {
-				// debug: true,
-			},
 			connection: {
 				reconnect: true,
 				secure: true,

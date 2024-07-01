@@ -28,8 +28,10 @@
   },
   "dependencies": {
     "@types/fast-levenshtein": "^0.0.4",
+    "@types/lodash": "^4.17.6",
     "date-fns": "^3.6.0",
     "fast-levenshtein": "^3.0.0",
+    "lodash": "^4.17.21",
     "solid-js": "^1.8.11",
     "tmi.js": "^1.8.5"
   }

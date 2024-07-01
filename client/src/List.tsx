@@ -12,6 +12,7 @@ import type tmi from "tmi.js";
 
 import Item, { type IItem } from "./Item";
 import { isDef } from "./helpers";
+import { scrapeWorkshop } from "./Scraper";
 
 const randomSet = (props: {
 	items: Resource<IItem[]>;
@@ -38,7 +39,7 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 
 	const [pickedItem, setPickedItem] = createSignal<IItem | undefined>();
 	const [items, { mutate }] = createResource<IItem[]>(async () => {
-		const itemsRes = await (await fetch("http://localhost:4000/scrape")).json();
+		const itemsRes = JSON.parse(JSON.stringify(await scrapeWorkshop()));
 		if (itemsRes) {
 			const randomIndex = Math.floor(Math.random() * itemsRes.length);
 			const item = itemsRes[randomIndex];
