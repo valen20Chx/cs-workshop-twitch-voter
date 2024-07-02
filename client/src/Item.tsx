@@ -11,24 +11,11 @@ import type tmi from "tmi.js";
 
 import { getClosestMatchingQuality, type Qualities } from "./Qualities";
 import VoteCount from "./VoteCount";
+import type { WorkshopItem } from "./Scraper";
 
-const formatDate = (dateStr: string): string => {
-	return format(dateStr, "yyyy-MM-dd");
+const formatDate = (date: Date): string => {
+	return format(date, "yyyy-MM-dd");
 };
-
-export interface IItem {
-	title: string;
-	link: string;
-	thumbnail: string;
-	author: {
-		name: string;
-		link: string;
-	};
-	authorImgSrc: string;
-	postedOn: string;
-	updatedOn: string;
-	imagesSrcs: string[];
-}
 
 const initVotes: Record<keyof typeof Qualities, number> = {
 	Consumer_grade: 0,
@@ -39,7 +26,7 @@ const initVotes: Record<keyof typeof Qualities, number> = {
 	Covert: 0,
 }
 
-const Item: Component<{ item: IItem, client: tmi.Client }> = (props) => {
+const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 	const [lastLink, setLastLink] = createSignal<string | undefined>(undefined);
 	const [currentImageDisplayed, setCurrentImageDisplayed] = createSignal(1);
 	const [votes, setVotes] = createSignal<Record<keyof typeof Qualities, number>>(initVotes);

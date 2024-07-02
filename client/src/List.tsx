@@ -3,71 +3,81 @@ import {
 	createResource,
 	createSignal,
 	onCleanup,
-	type Resource,
-	type Setter,
 	type Component,
 } from "solid-js";
 
 import type tmi from "tmi.js";
 
-import Item, { type IItem } from "./Item";
+import Item from "./Item";
 import { isDef } from "./helpers";
-import { scrapeWorkshop } from "./Scraper";
+import { scrapeWorkshopItem, scrapeWorkshopList, type WorkshopItemShort, type WorkshopItem } from "./Scraper";
 
-const randomSet = (props: {
-	items: Resource<IItem[]>;
-	setPickedItem: Setter<IItem | undefined>;
-	mutate: Setter<IItem[] | undefined>;
-	interval: number;
-	setCompleted: () => void;
-}) => {
-	const currentItems = props.items();
-	if (currentItems && currentItems.length > 0) {
-		const randomIndex = Math.floor(Math.random() * currentItems.length);
-		const item = currentItems[randomIndex];
-		props.setPickedItem(item);
-
-		props.mutate(currentItems.filter((_, index) => index !== randomIndex));
-	} else {
-		props.setCompleted();
-		clearInterval(props.interval);
-	}
-};
+const SWAP_ITEM_INTERVAL = 20 * 1000;
 
 const List: Component<{ client: tmi.Client }> = (props) => {
-	const [completed, setCompleted] = createSignal(false);
+	const [completed, setCompleted] = createSignal<boolean>(false);
+	const [pickedItem, setPickedItem] = createSignal<WorkshopItem | undefined>();
+	const [items, setItems] = createSignal<WorkshopItem[]>([]);
+	const [pickedItemStartTime, setPickedItemStartTime] = createSignal<Date>(new Date());
 
-	const [pickedItem, setPickedItem] = createSignal<IItem | undefined>();
-	const [items, { mutate }] = createResource<IItem[]>(async () => {
-		const itemsRes = JSON.parse(JSON.stringify(await scrapeWorkshop()));
-		if (itemsRes) {
-			const randomIndex = Math.floor(Math.random() * itemsRes.length);
-			const item = itemsRes[randomIndex];
-			setPickedItem(item);
+	const [shortItems] = createResource<WorkshopItemShort[]>(async () => {
+		const shortItems = await scrapeWorkshopList();
+		if (shortItems) {
+			const randomizedArray = new Array<WorkshopItemShort>(shortItems.length);
 
-			return itemsRes;
+			while (shortItems.length) {
+				const randomIndex = Math.floor(Math.random() * shortItems.length);
+				const item = shortItems[randomIndex];
+				randomizedArray[shortItems.length - 1] = item;
+				shortItems.splice(randomIndex, 1)
+			}
+
+			console.log("ShortItems", randomizedArray);
+
+			// Preload first item
+			const item = randomizedArray.pop();
+			if (item) {
+				setItems([await scrapeWorkshopItem(item)]);
+			}
+
+			return randomizedArray;
 		}
 		console.error("Could not fetch workshop");
 		return [];
 	});
 
-	// Slideshow
+	// Load full items
 	createEffect(() => {
-		if (!items()) return;
+		if (isDef(shortItems) && shortItems().length) {
+			Promise.all(
+				shortItems().map((shortItem) => scrapeWorkshopItem(shortItem))
+			).then(items => {
+				setItems(
+					items
+				);
+			});
+		}
+	});
 
-		const interval = setInterval(
-			() =>
-				randomSet({
-					mutate,
-					setPickedItem,
-					items,
-					interval,
-					setCompleted: () => setCompleted(true),
-				}),
-			1000 * 20,
-		);
-
-		onCleanup(() => clearInterval(interval));
+	// Swap items
+	createEffect(() => {
+		let interval: number | undefined;
+		if (isDef(items) && items().length) {
+			const itemsList = items();
+			let index = 1;
+			interval = setInterval(() => {
+				if (index < itemsList.length) {
+					setPickedItem(itemsList.at(index));
+					index++;
+				} else {
+					setCompleted(true);
+					clearInterval(interval);
+				}
+			}, SWAP_ITEM_INTERVAL);
+		}
+		onCleanup(() => {
+			clearInterval(interval);
+		});
 	});
 
 	if (completed()) {
@@ -80,7 +90,7 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 
 	return (
 		<div class="w-full h-full">
-			{items.loading && (
+			{shortItems.loading && (
 				<div class="flex flex-row justify-center">
 					<p class="text-center">Loading...</p>
 				</div>

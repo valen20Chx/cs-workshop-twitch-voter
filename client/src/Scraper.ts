@@ -32,8 +32,6 @@ const parsePage = async <T>(url: string, fn: (document: Document) => T): Promise
 	// WARN : This proxy might stop working anytime.
 	const proxiedUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url.toString())}`;
 
-	console.log(proxiedUrl);
-
 	const htmlText = await fetch(proxiedUrl).then(res => res.text());
 
 	const parser = new DOMParser();
@@ -42,10 +40,10 @@ const parsePage = async <T>(url: string, fn: (document: Document) => T): Promise
 	return fn(doc);
 }
 
-export async function scrapeWorkshop() {
+export async function scrapeWorkshopList(): Promise<WorkshopItemShort[]> {
 	const url = new WorkshopPageUrl({ appid: "730", page: 1 });
 
-	const items = await parsePage(url.toString(), (document): WorkshopItemShort[] => {
+	return parsePage(url.toString(), (document): WorkshopItemShort[] => {
 		return [...document.querySelectorAll("div.workshopItem")].map(item => {
 			const titleElement = item.querySelector("div.workshopItemTitle");
 			const linkElement = item.querySelector("a");
@@ -86,51 +84,9 @@ export async function scrapeWorkshop() {
 			});
 		});
 	});
-
-
-	const wholeItems = new Array<WorkshopItem>();
-	for (const item of items) {
-		console.log(`Scraping ${item.title}`);
-		wholeItems.push(await scrapeFullInfo(item));
-	}
-
-	console.log(wholeItems);
-
-	return wholeItems;
 }
 
-const parseWorkshopDate = (dateStr: string): Date => {
-	return parse(dateStr, "d MMM @ h:mmaaa", new Date());
-};
-
-interface Author {
-	name: string;
-	link: string;
-}
-
-export interface WorkshopItemShort {
-	title: string;
-	link: string;
-	thumbnail: string;
-	author: Author;
-}
-
-export type WorkshopItemRaw = WorkshopItemShort & {
-	imagesSrcs: string[];
-	authorImgSrc: string;
-	postedOnStr: string;
-	updatedOnStr: string;
-};
-
-export type WorkshopItem = Omit<
-	WorkshopItemRaw,
-	"postedOnStr" | "updatedOnStr"
-> & {
-	postedOn: Date;
-	updatedOn: Date;
-};
-
-export async function scrapeFullInfo(
+export async function scrapeWorkshopItem(
 	shortItem: WorkshopItemShort,
 ): Promise<WorkshopItem> {
 	const itemRaw = await parsePage(shortItem.link, (document) => {
@@ -211,3 +167,35 @@ export async function scrapeFullInfo(
 		}),
 	};
 }
+
+const parseWorkshopDate = (dateStr: string): Date => {
+	return parse(dateStr, "d MMM @ h:mmaaa", new Date());
+};
+
+interface Author {
+	name: string;
+	link: string;
+}
+
+export interface WorkshopItemShort {
+	title: string;
+	link: string;
+	thumbnail: string;
+	author: Author;
+}
+
+export type WorkshopItemRaw = WorkshopItemShort & {
+	imagesSrcs: string[];
+	authorImgSrc: string;
+	postedOnStr: string;
+	updatedOnStr: string;
+};
+
+export type WorkshopItem = Omit<
+	WorkshopItemRaw,
+	"postedOnStr" | "updatedOnStr"
+> & {
+	postedOn: Date;
+	updatedOn: Date;
+};
+
