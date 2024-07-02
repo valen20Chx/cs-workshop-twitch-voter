@@ -30,20 +30,30 @@ export interface IItem {
 	imagesSrcs: string[];
 }
 
+const initVotes: Record<keyof typeof Qualities, number> = {
+	Consumer_grade: 0,
+	Industrial_grade: 0,
+	Mil_spec: 0,
+	Restricted: 0,
+	Classified: 0,
+	Covert: 0,
+}
+
 const Item: Component<{ item: IItem, client: tmi.Client }> = (props) => {
 	const [lastLink, setLastLink] = createSignal<string | undefined>(undefined);
 	const [currentImageDisplayed, setCurrentImageDisplayed] = createSignal(1);
-	const [votes, setVotes] = createSignal<Record<keyof typeof Qualities, number>>({
-		Consumer_grade: 0,
-		Industrial_grade: 0,
-		Mil_spec: 0,
-		Restricted: 0,
-		Classified: 0,
-		Covert: 0,
-	});
+	const [votes, setVotes] = createSignal<Record<keyof typeof Qualities, number>>(initVotes);
 
 	const maxVote = createMemo(() => {
 		return Math.max(...Object.values(votes()))
+	});
+
+	// Reset on skin change
+	createEffect(() => {
+		if (props.item.link) {
+			setVotes(initVotes);
+
+		}
 	});
 
 	// Chat
