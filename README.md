@@ -7,14 +7,13 @@ Preview and vote on trending workshop items with your twitch chat.
 
 # Stack
 ## Front
-SolidJS
-Tailwind
+- SolidJS
+- Tailwind
 
 ## Back (Unused)
-Node (at least v18.19.0, honestly this app is so simple it will surely work on older versions.)
-
-express
-puppeteer
+- Node (at least v18.19.0, honestly this app is so simple it will surely work on older versions.)
+- express
+- puppeteer
 
 # Building and running it
 
@@ -29,20 +28,19 @@ npm run start
 
 # Info
 
-I recently removed the use of the server.
-I was able to scrape the steam workshop from the front-end.
+I removed the use of the server.
+I was able to scrape the steam workshop from the front-end (By using a cors proxy).
 But this workaround is not 'stable', so I keep the back-end code for now.
 
 # Todo:
 
-- Reset voting when changing item.
-- Load items one at a time. (While displaying the 'login screen' & load next item while displaying the current one.)
-- Load next page when we run out of items.
+- Load items on the loading screen.
+- Allow the streamer to pause on a skin.
+- Show summary at the end. (Maybe create a case display ?)
 - Store 'already seen skins' in local storage to skip them.
 - Fix image scaling (When the workshop item's image is low res, there's a weird black border).
-- Rework UI when in 'portrait' mode.
-- Add timer to indicate the time until the next item.
-- Improve transition between items.
+- Rework UI when in 'landscape' mode (fullscreen).
+- Improve transition between items. (Preload images of next skin ?)
 
 # Contributing
 
