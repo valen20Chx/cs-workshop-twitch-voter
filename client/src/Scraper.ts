@@ -22,7 +22,10 @@ export class WorkshopPageUrl {
 		url.searchParams.set("browsesort", "trend");
 		url.searchParams.set("section", "mtxitems");
 		url.searchParams.set("actualsort", "trend");
-		url.searchParams.set("days", "1");
+		url.searchParams.set("childpublishedfileid", "0");
+		url.searchParams.set("excludedtags%5B%5D", "Sticker");
+		url.searchParams.set("excludedtags%5B%5D", "Spray");
+		url.searchParams.set("excludedtags%5B%5D", "Tournament+Submission");
 
 		return url.toString();
 	}
