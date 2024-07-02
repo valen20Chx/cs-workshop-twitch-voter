@@ -48,13 +48,11 @@ export async function scrapeWorkshopList(): Promise<WorkshopItemShort[]> {
 			const titleElement = item.querySelector("div.workshopItemTitle");
 			const linkElement = item.querySelector("a");
 			const thumbnailElement = item.querySelector("img");
-			const authorElement = item.querySelector("a.workshop_author_link");
 
 			if (
 				!titleElement ||
 				!linkElement ||
-				!thumbnailElement ||
-				!authorElement
+				!thumbnailElement
 			) {
 				throw new Error("Nothing found for item");
 			}
@@ -62,25 +60,15 @@ export async function scrapeWorkshopList(): Promise<WorkshopItemShort[]> {
 			const title = titleElement.textContent;
 			const link = linkElement.href;
 			const thumbnail = thumbnailElement.src;
-			const authorName = authorElement.textContent;
-			const authorLink = authorElement.getAttribute("href");
 
 			if (!title) {
 				throw new Error("Title not found");
-			}
-
-			if (!authorName || !authorLink) {
-				throw new Error("Author not found");
 			}
 
 			return ({
 				title,
 				link,
 				thumbnail,
-				author: {
-					name: authorName,
-					link: authorLink,
-				},
 			});
 		});
 	});
@@ -89,7 +77,7 @@ export async function scrapeWorkshopList(): Promise<WorkshopItemShort[]> {
 export async function scrapeWorkshopItem(
 	shortItem: WorkshopItemShort,
 ): Promise<WorkshopItem> {
-	const itemRaw = await parsePage(shortItem.link, (document) => {
+	const itemRaw = await parsePage<WorkshopItemRaw>(shortItem.link, (document) => {
 		const imagesSelector = 'div[id^="thumb_screenshot"] > img';
 		const imagesElements = document.querySelectorAll(imagesSelector);
 		const imagesSrcs = [...imagesElements.values()]
@@ -114,6 +102,20 @@ export async function scrapeWorkshopItem(
 				`No images found (${shortItem.title} : ${shortItem.link})`,
 			);
 		}
+
+		const authors = [...document.querySelectorAll("div.creatorsBlock > div").values()].map<Author>(authorBlockEle => {
+			const imgSrc = authorBlockEle.querySelector(
+				"div.creatorsBlock div.playerAvatar img",
+			)?.getAttribute("src");
+			const name = authorBlockEle.querySelector("div.creatorsBlock > div > div:nth-child(3)")?.textContent?.trim().split("\n")[0];
+			const link = authorBlockEle.querySelector("a")?.href;
+
+			if (!imgSrc || !name || !link) {
+				throw new Error("Could not form author");
+			}
+
+			return { name, link, imgSrc };
+		});
 
 		const authorImgElement = document.querySelector(
 			"div.creatorsBlock div.playerAvatar img",
@@ -149,6 +151,7 @@ export async function scrapeWorkshopItem(
 			authorImgSrc,
 			postedOnStr,
 			updatedOnStr,
+			authors,
 		};
 	});
 
@@ -175,18 +178,18 @@ const parseWorkshopDate = (dateStr: string): Date => {
 interface Author {
 	name: string;
 	link: string;
+	imgSrc: string;
 }
 
 export interface WorkshopItemShort {
 	title: string;
 	link: string;
 	thumbnail: string;
-	author: Author;
 }
 
 export type WorkshopItemRaw = WorkshopItemShort & {
 	imagesSrcs: string[];
-	authorImgSrc: string;
+	authors: Author[];
 	postedOnStr: string;
 	updatedOnStr: string;
 };

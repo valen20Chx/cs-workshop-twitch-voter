@@ -2,7 +2,9 @@ import {
 	createEffect,
 	createResource,
 	createSignal,
+	Match,
 	onCleanup,
+	Switch,
 	type Component,
 } from "solid-js";
 
@@ -112,14 +114,22 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 
 	return (
 		<div class="w-full h-full flex flex-row items-center justify-center">
-			{shortItems.loading && <p class="font-bold text-xl">Loading...</p>}
+			<Switch>
+				<Match when={shortItems.loading}>
+					<p class="font-bold text-xl">Loading...</p>
+				</Match>
 
-			{completed() && <p class="font-bold text-xl">Completed</p>}
+				<Match when={completed()}>
+					<p class="font-bold text-xl">Completed</p>
+				</Match>
+				<Match when={isDef(pickedItem)}>
+					{isDef(pickedItem) && <div class="w-full h-full">
+						<Item item={pickedItem()} client={props.client} />
+						<Countdown percent={countdownPercent()} seconds={countdownSeconds()} class="absolute z-20 right-4 top-4" />
+					</div>}
+				</Match>
 
-			{isDef(pickedItem) && <div class="w-full h-full">
-				<Item item={pickedItem()} client={props.client} />
-				<Countdown percent={countdownPercent()} seconds={countdownSeconds()} class="absolute z-20 right-4 top-4" />
-			</div>}
+			</Switch>
 		</div>
 	);
 };

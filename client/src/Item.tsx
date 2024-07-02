@@ -116,16 +116,17 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 			</div>
 
 			<div class="p-2 flex gap-4 w-full">
-				<div>
-					<p class="font-bold">Author</p>
-					<p>
-						<a class="underline text-yellow-100" href={props.item.author.link}>
-							{props.item.author.name}
-						</a>
-					</p>
+				<div class="w-64">
+					<p class="font-bold">Authors</p>
+					{props.item.authors.map(author => <a class="flex mt-4 gap-2 items-center hover:bg-blue-900" href={author.link}>
+						<img src={author.imgSrc} alt={`author ${author.name}`} />
+						<p>
+							{author.name}
+						</p>
+					</a>)}
 				</div>
 
-				<div class="w-52">
+				<div class="w-64">
 					<p class="font-bold">Details</p>
 					<p>
 						Posted:{" "}
