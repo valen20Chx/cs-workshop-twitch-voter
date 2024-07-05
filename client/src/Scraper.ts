@@ -80,98 +80,100 @@ export async function scrapeWorkshopList(): Promise<WorkshopItemShort[]> {
 export async function scrapeWorkshopItem(
 	shortItem: WorkshopItemShort,
 ): Promise<WorkshopItem> {
-	const itemRaw = await parsePage<WorkshopItemRaw>(shortItem.link, (document) => {
-		const imagesSelector = 'div[id^="thumb_screenshot"] > img';
-		const imagesElements = document.querySelectorAll(imagesSelector);
-		const imagesSrcs = [...imagesElements.values()]
-			.map((imageElement) => imageElement.getAttribute("src"))
-			.reduce<string[]>((arr, curr) => {
-				if (curr) {
-					arr.push(curr);
-				}
-				return arr;
-			}, []);
+	try {
 
-		const singleImageSelector = "img#previewImage";
-		const singleImageElement = document.querySelector(singleImageSelector);
-		const singleImageSrc = singleImageElement?.getAttribute("src");
+		const itemRaw = await parsePage<WorkshopItemRaw>(shortItem.link, (document) => {
+			const imagesSelector = 'div[id^="thumb_screenshot"] > img';
+			const imagesElements = document.querySelectorAll(imagesSelector);
+			const imagesSrcs = [...imagesElements.values()]
+				.map((imageElement) => imageElement.getAttribute("src"))
+				.reduce<string[]>((arr, curr) => {
+					if (curr) {
+						arr.push(curr);
+					}
+					return arr;
+				}, []);
 
-		if (!imagesSrcs.length && singleImageSrc) {
-			imagesSrcs.push(singleImageSrc);
-		}
+			const singleImageSelector = "img#previewImage";
+			const singleImageElement = document.querySelector(singleImageSelector);
+			const singleImageSrc = singleImageElement?.getAttribute("src");
 
-		if (!imagesSrcs.length) {
-			throw new Error(
-				`No images found (${shortItem.title} : ${shortItem.link})`,
-			);
-		}
-
-		const authors = [...document.querySelectorAll("div.creatorsBlock > div").values()].map<Author>(authorBlockEle => {
-			const imgSrc = authorBlockEle.querySelector(
-				"div.creatorsBlock div.playerAvatar img",
-			)?.getAttribute("src");
-			const name = authorBlockEle.querySelector("div.creatorsBlock > div > div:nth-child(3)")?.textContent?.trim().split("\n")[0];
-			const link = authorBlockEle.querySelector("a")?.href;
-
-			if (!imgSrc || !name || !link) {
-				throw new Error("Could not form author");
+			if (!imagesSrcs.length && singleImageSrc) {
+				imagesSrcs.push(singleImageSrc);
 			}
 
-			return { name, link, imgSrc };
+			if (!imagesSrcs.length) {
+				throw new Error(
+					`No images found (${shortItem.title} : ${shortItem.link})`,
+				);
+			}
+
+			const authors = [...document.querySelectorAll("div.creatorsBlock > div").values()].map<Author>(authorBlockEle => {
+				const imgSrc = authorBlockEle.querySelector(
+					"div.creatorsBlock div.playerAvatar img",
+				)?.getAttribute("src");
+				const name = authorBlockEle.querySelector("div.creatorsBlock > div > div:nth-child(3)")?.textContent?.trim().split("\n")[0];
+				const link = authorBlockEle.querySelector("a")?.href;
+
+				if (!imgSrc || !name || !link) {
+					throw new Error("Could not form author");
+				}
+
+				return { name, link, imgSrc };
+			});
+
+			const authorImgElement = document.querySelector(
+				"div.creatorsBlock div.playerAvatar img",
+			);
+			const authorImgSrc = authorImgElement?.getAttribute("src");
+
+			if (!authorImgSrc) {
+				throw new Error("No author img found");
+			}
+
+			const postedOnSelector =
+				"div.detailsStatsContainerRight > div:nth-child(2)";
+
+			const postedOnElement = document.querySelector(postedOnSelector);
+			const postedOnStr = postedOnElement?.textContent;
+
+			if (!postedOnStr) {
+				throw new Error("No postedOn found");
+			}
+
+			const updatedOnSelector =
+				"div.detailsStatsContainerRight > div:nth-child(3)";
+			const updatedOnElement = document.querySelector(updatedOnSelector);
+			const updatedOnStr = updatedOnElement?.textContent;
+
+			return {
+				...shortItem,
+				imagesSrcs: imagesSrcs,
+				authorImgSrc,
+				postedOnStr,
+				updatedOnStr,
+				authors,
+			};
 		});
 
-		const authorImgElement = document.querySelector(
-			"div.creatorsBlock div.playerAvatar img",
-		);
-		const authorImgSrc = authorImgElement?.getAttribute("src");
-
-		if (!authorImgSrc) {
-			throw new Error("No author img found");
-		}
-
-		const postedOnSelector =
-			"div.detailsStatsContainerRight > div:nth-child(2)";
-
-		const postedOnElement = document.querySelector(postedOnSelector);
-		const postedOnStr = postedOnElement?.textContent;
-
-		if (!postedOnStr) {
-			throw new Error("No postedOn found");
-		}
-
-		const updatedOnSelector =
-			"div.detailsStatsContainerRight > div:nth-child(3)";
-		const updatedOnElement = document.querySelector(updatedOnSelector);
-		const updatedOnStr = updatedOnElement?.textContent;
-
-		if (!updatedOnStr) {
-			throw new Error("No updatedOn found");
-		}
-
 		return {
-			...shortItem,
-			imagesSrcs: imagesSrcs,
-			authorImgSrc,
-			postedOnStr,
-			updatedOnStr,
-			authors,
+			..._.omit(itemRaw, ["postedOnStr", "updatedOnStr", "imagesSrcs"]),
+			postedOn: parseWorkshopDate(itemRaw.postedOnStr),
+			updatedOn: itemRaw.updatedOnStr ? parseWorkshopDate(itemRaw.updatedOnStr) : undefined,
+			imagesSrcs: itemRaw.imagesSrcs.map((src) => {
+				const url = new URL(src);
+
+				// We receive a low res thumbnail. Here we resize it.
+				url.searchParams.set("imw", "1920");
+				url.searchParams.set("imh", "1080");
+
+				return url.href;
+			}),
 		};
-	});
-
-	return {
-		..._.omit(itemRaw, ["postedOnStr", "updatedOnStr", "imagesSrcs"]),
-		postedOn: parseWorkshopDate(itemRaw.postedOnStr),
-		updatedOn: parseWorkshopDate(itemRaw.updatedOnStr),
-		imagesSrcs: itemRaw.imagesSrcs.map((src) => {
-			const url = new URL(src);
-
-			// We receive a low res thumbnail. Here we resize it.
-			url.searchParams.set("imw", "1920");
-			url.searchParams.set("imh", "1080");
-
-			return url.href;
-		}),
-	};
+	} catch (e) {
+		console.error(`Error while scraping ${shortItem.link}`);
+		throw e;
+	}
 }
 
 const parseWorkshopDate = (dateStr: string): Date => {
@@ -202,6 +204,6 @@ export type WorkshopItem = Omit<
 	"postedOnStr" | "updatedOnStr"
 > & {
 	postedOn: Date;
-	updatedOn: Date;
+	updatedOn?: Date;
 };
 

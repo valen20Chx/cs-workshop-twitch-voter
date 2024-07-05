@@ -39,7 +39,7 @@ const App: Component = () => {
 	}
 
 	return (
-		<div class="h-screen w-screen bg-blue-950 text-white">
+		<div class="h-screen w-screen bg-blue-950 text-white aspect-video">
 			<Switch fallback={"Dev is shiet. Should not happen"}>
 				<Match when={state() === State.ready}>
 					{isDef(twitchClient) && <List client={twitchClient()} />}

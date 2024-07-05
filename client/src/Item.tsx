@@ -83,66 +83,85 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 			if (sliderEle) sliderEle.style.transform = "";
 		}
 	});
+	const headerHeight = "60px";
 
 	return (
 		<div>
-			<p class="text-center font-bold text-lg">{props.item.title}</p>
-			<a
-				class="text-center underline text-yellow-100 block"
-				href={props.item.link}
+			<div
+				style={{
+					height: headerHeight
+				}}
 			>
-				Visit
-			</a>
-
-			<div class="flex overflow-x-hidden relative w-full">
-				<div
-					id="slider"
-					class="flex transition-transform duration-700 ease-in-out"
+				<p class="text-center font-bold text-lg">{props.item.title}</p>
+				<a
+					class="text-center underline text-yellow-100 block"
+					href={props.item.link}
 				>
-					{props.item.imagesSrcs.map((src, index) => (
-						<img
-							src={src}
-							class="w-full flex-shrink-0"
-							alt={`image-${index + 1}`}
-						/>
-					))}
-				</div>
-
-				<div class="p-2 z-10 absolute bottom-0 right-0">
-					<p>
-						{currentImageDisplayed()} / {props.item.imagesSrcs.length}
-					</p>
-				</div>
+					Visit
+				</a>
 			</div>
 
-			<div class="p-2 flex gap-4 w-full">
-				<div class="w-64">
-					<p class="font-bold">Authors</p>
-					{props.item.authors.map(author => <a class="flex mt-4 gap-2 items-center hover:bg-blue-900" href={author.link}>
-						<img src={author.imgSrc} alt={`author ${author.name}`} />
+			<main
+				class="flex flex-row items-center flex-1"
+				style={{
+					height: `calc(100% - ${headerHeight})`
+				}}
+			>
+
+				<div
+					class="flex overflow-x-hidden relative justify-center items-center"
+				>
+					<div
+						id="slider"
+						class="flex transition-transform duration-700 ease-in-out"
+					>
+						{props.item.imagesSrcs.map((src, index) => (
+							<img
+								src={src}
+								class="flex-shrink-0 max-h-full max-w-full object-contain"
+								alt={`image-${index + 1}`}
+							/>
+						))}
+					</div>
+
+					<div class="p-2 z-10 absolute bottom-0 right-0">
 						<p>
-							{author.name}
+							{currentImageDisplayed()} / {props.item.imagesSrcs.length}
 						</p>
-					</a>)}
+					</div>
 				</div>
 
-				<div class="w-64">
-					<p class="font-bold">Details</p>
-					<p>
-						Posted:{" "}
-						<span class="font-bold">{formatDate(props.item.postedOn)}</span>
-					</p>
-					<p>
-						Updated:{" "}
-						<span class="font-bold">{formatDate(props.item.updatedOn)}</span>
-					</p>
-				</div>
+				<div class="p-2 flex flex-col gap-4 w-full">
+					<div class="p-2 flex gap-4 w-full">
+						<div class="w-64">
+							<p class="font-bold">Authors</p>
+							{props.item.authors.map(author => <a class="flex mt-4 gap-2 items-center hover:bg-blue-900" href={author.link}>
+								<img src={author.imgSrc} alt={`author ${author.name}`} />
+								<p>
+									{author.name}
+								</p>
+							</a>)}
+						</div>
 
-				<div class="w-full">
-					<p class="font-bold">Votes (Write in chat to vote)</p>
-					<VoteCount votes={votes()} maxVote={maxVote()} />
+						<div class="w-64">
+							<p class="font-bold">Details</p>
+							<p>
+								Posted:{" "}
+								<span class="font-bold">{formatDate(props.item.postedOn)}</span>
+							</p>
+							{props.item.updatedOn && <p>
+								Updated:{" "}
+								<span class="font-bold">{formatDate(props.item.updatedOn)}</span>
+							</p>}
+						</div>
+					</div>
+
+					<div class="w-full">
+						<p class="font-bold">Votes (Write in chat to vote)</p>
+						<VoteCount votes={votes()} maxVote={maxVote()} />
+					</div>
 				</div>
-			</div>
+			</main>
 		</div>
 	);
 };
