@@ -20,7 +20,7 @@ const Countdown: Component<{ percent: number; seconds: number; class?: string; }
 			}}
 			class={`bg-sky-400 rounded-full flex items-center justify-center ${props.class ?? ""}`}
 		>
-			<p class="text-blue-950 font-bold text-2xl">{props.seconds}</p>
+			<p class="text-blue-950 font-bold text-2xl">{props.seconds.toFixed(1)}</p>
 			<svg id="countdown" viewBox="0 0 36 36" style={{
 				position: "absolute",
 				width: "100px",

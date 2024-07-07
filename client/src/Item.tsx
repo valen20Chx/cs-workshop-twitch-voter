@@ -83,28 +83,12 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 			if (sliderEle) sliderEle.style.transform = "";
 		}
 	});
-	const headerHeight = "60px";
-
 	return (
 		<div>
-			<div
-				style={{
-					height: headerHeight
-				}}
-			>
-				<p class="text-center font-bold text-lg">{props.item.title}</p>
-				<a
-					class="text-center underline text-yellow-100 block"
-					href={props.item.link}
-				>
-					Visit
-				</a>
-			</div>
-
 			<main
 				class="flex flex-row items-center flex-1"
 				style={{
-					height: `calc(100% - ${headerHeight})`
+					height: "calc(100% - 80px)"
 				}}
 			>
 

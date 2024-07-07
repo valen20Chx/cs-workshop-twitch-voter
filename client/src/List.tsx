@@ -1,137 +1,227 @@
-import {
-	createEffect,
-	createResource,
-	createSignal,
-	Match,
-	onCleanup,
-	Switch,
-	type Component,
-} from "solid-js";
+import { createSignal, createEffect, onCleanup, type Component, createResource, createMemo, Switch, Match } from "solid-js";
 
 import type tmi from "tmi.js";
-
-import Item from "./Item";
-import { isDef } from "./helpers";
 import { scrapeWorkshopItem, scrapeWorkshopList, type WorkshopItemShort, type WorkshopItem } from "./Scraper";
+import { isDef } from "./helpers";
+import Item from "./Item";
+import Button from "./Button";
 import Countdown from "./Countdown";
 
-const SWAP_ITEM_INTERVAL = 20 * 1000;
+const SWAP_ITEM_INTERVAL = 10 * 1000;
+
+const loadList = async (): Promise<WorkshopItem[]> => {
+	const shortItems = await scrapeWorkshopList();
+	if (shortItems) {
+		const randomizedArray = new Array<WorkshopItemShort>(shortItems.length);
+
+		while (shortItems.length) {
+			const randomIndex = Math.floor(Math.random() * shortItems.length);
+			const item = shortItems[randomIndex];
+			randomizedArray[shortItems.length - 1] = item;
+			shortItems.splice(randomIndex, 1);
+		}
+
+		return Promise.all(
+			randomizedArray.map((shortItem) => scrapeWorkshopItem(shortItem))
+		);
+	}
+
+	console.error("Could not fetch workshop");
+	return [];
+};
+
+const createInterval = (callback: () => void, intervalDuration: number) => {
+	const [intervalId, setIntervalId] = createSignal<number | undefined>(undefined);
+
+	const start = () => {
+		if (intervalId()) return; // Prevent multiple intervals
+		const id = setInterval(callback, intervalDuration);
+		setIntervalId(id);
+	};
+
+	const stop = () => {
+		const id = intervalId();
+		if (id !== undefined) {
+			clearInterval(id);
+			setIntervalId(undefined);
+		}
+	};
+
+	onCleanup(() => {
+		const id = intervalId();
+		if (id !== undefined) {
+			clearInterval(id);
+		}
+	});
+
+	return { start, stop };
+};
 
 const List: Component<{ client: tmi.Client }> = (props) => {
-	const [completed, setCompleted] = createSignal<boolean>(false);
-	const [pickedItem, setPickedItem] = createSignal<WorkshopItem | undefined>();
-	const [items, setItems] = createSignal<WorkshopItem[]>([]);
+	const [pickedItemIndex, setPickedItemIndex] = createSignal<number>(0);
+
 	const [pickedItemStartTime, setPickedItemStartTime] = createSignal<Date | undefined>();
+
 	const [countdownPercent, setCountdownPercent] = createSignal<number>(100);
-	const [countdownSeconds, setCountdownSeconds] = createSignal<number>(SWAP_ITEM_INTERVAL);
+	const [countdownSeconds, setCountdownSeconds] = createSignal<number>(SWAP_ITEM_INTERVAL / 1000);
 
-	const [shortItems] = createResource<WorkshopItemShort[]>(async () => {
-		const shortItems = await scrapeWorkshopList();
-		if (shortItems) {
-			const randomizedArray = new Array<WorkshopItemShort>(shortItems.length);
+	const [state, setState] = createSignal<"initializing" | "paused" | "running" | "completed">("initializing");
 
-			while (shortItems.length) {
-				const randomIndex = Math.floor(Math.random() * shortItems.length);
-				const item = shortItems[randomIndex];
-				randomizedArray[shortItems.length - 1] = item;
-				shortItems.splice(randomIndex, 1)
-			}
+	const [items] = createResource<WorkshopItem[]>(loadList);
 
-			// Preload first item
-			const shortItem = randomizedArray.pop();
-			if (shortItem) {
-				const firstItem = await scrapeWorkshopItem(shortItem);
-				setItems([firstItem]);
-				setPickedItem(firstItem);
-			}
-
-			return randomizedArray;
+	const pickedItem = createMemo<WorkshopItem | undefined>(() => {
+		if (isDef(pickedItemIndex) && isDef(items)) {
+			return items().at(pickedItemIndex());
 		}
-
-		console.error("Could not fetch workshop");
-		return [];
+		return undefined;
 	});
 
-	createEffect(() => {
-		if (isDef(pickedItem)) {
-			setPickedItemStartTime(new Date());
+	const previousItem = createMemo<WorkshopItem | undefined>(() => {
+		if (isDef(pickedItemIndex) && isDef(items)) {
+			return items().at(pickedItemIndex() - 1);
 		}
+		return undefined;
 	});
 
-	// Update the countdown percent
-	createEffect(() => {
-		let interval: number | undefined;
+	const nextItem = createMemo<WorkshopItem | undefined>(() => {
+		if (isDef(pickedItemIndex) && isDef(items)) {
+			return items().at(pickedItemIndex() + 1);
+		}
+		return undefined;
+	});
 
-		if (isDef(pickedItemStartTime)) {
+	const updateCountdown = () => {
+		if (isDef(pickedItemStartTime) && state() === "running") {
 			const start = pickedItemStartTime();
-			interval = setInterval(() => {
-				const now = new Date();
-				const ms = SWAP_ITEM_INTERVAL - (now.getTime() - start.getTime());
-				const percent = Math.floor((ms / SWAP_ITEM_INTERVAL) * 100);
-				setCountdownPercent(Math.max(0, Math.min(100, percent)));
-				setCountdownSeconds(Math.max(0, Math.min(SWAP_ITEM_INTERVAL / 1000, Math.floor(ms / 1000))));
-			}, 100);
+			const now = new Date();
+			const ms = SWAP_ITEM_INTERVAL - (now.getTime() - start.getTime());
+			const percent = Math.floor((ms / SWAP_ITEM_INTERVAL) * 100);
+			setCountdownPercent(Math.max(0, Math.min(100, percent)));
+			setCountdownSeconds(
+				Math.max(
+					0,
+					Math.min(
+						SWAP_ITEM_INTERVAL / 1000,
+						(ms / 1000)
+					)
+				)
+			);
 		}
+	};
 
-		onCleanup(() => {
-			clearInterval(interval);
+	const { start: startSwapItemInterval, stop: stopSwapItemInterval } = createInterval(() => {
+		setPickedItemIndex((index) => {
+			if (index !== undefined && isDef(items) && index < items().length - 1) {
+				setPickedItemStartTime(new Date());
+				return index + 1;
+			}
+			setState("completed");
+			return index;
 		});
+	}, SWAP_ITEM_INTERVAL);
+
+	let countdownInterval: number | undefined;
+
+	createEffect(() => {
+		if (state() === "running") {
+			setPickedItemStartTime(new Date());
+			countdownInterval = setInterval(updateCountdown, 100);
+			startSwapItemInterval();
+		} else {
+			clearInterval(countdownInterval);
+			stopSwapItemInterval();
+		}
 	});
 
-	// Load full items
 	createEffect(() => {
-		if (isDef(shortItems) && shortItems().length) {
-			Promise.all(
-				shortItems().map((shortItem) => scrapeWorkshopItem(shortItem))
-			).then(items => {
-				setItems(
-					items
-				);
+		if (!items.loading && isDef(items) && items().length) {
+			setState("running");
+		}
+	});
+
+	onCleanup(() => {
+		clearInterval(countdownInterval);
+		stopSwapItemInterval();
+	});
+
+	const pauseOrResume = () => {
+		if (state() === "running") {
+			setState("paused");
+		} else if (state() === "paused") {
+			setState("running");
+		}
+	};
+
+	const setPreviousItem = () => {
+		setPickedItemIndex((index) => {
+			if (index !== undefined && index > 0) {
+				return index - 1;
+			}
+			return index;
+		});
+	};
+
+	const setNextItem = () => {
+		if (isDef(items)) {
+			const itemsList = items();
+			setPickedItemIndex((index) => {
+				if (index !== undefined && index < itemsList.length - 1) {
+					return index + 1;
+				}
+				return index;
 			});
 		}
-	});
-
-	// Swap items
-	createEffect(() => {
-		let interval: number | undefined;
-		if (isDef(items) && items().length) {
-			const itemsList = items();
-			let index = 0;
-			interval = setInterval(() => {
-				if (index < itemsList.length) {
-					setPickedItem(itemsList.at(index));
-					index++;
-				} else {
-					setCompleted(true);
-					clearInterval(interval);
-				}
-			}, SWAP_ITEM_INTERVAL);
-		}
-		onCleanup(() => {
-			clearInterval(interval);
-		});
-	});
+	};
 
 	return (
 		<div class="w-full h-full flex flex-row items-center justify-center">
 			<Switch>
-				<Match when={shortItems.loading}>
+				<Match when={items.loading}>
 					<p class="font-bold text-xl">Loading...</p>
 				</Match>
-
-				<Match when={completed()}>
+				<Match when={state() === "completed"}>
 					<p class="font-bold text-xl">Completed</p>
 				</Match>
 				<Match when={isDef(pickedItem)}>
-					{isDef(pickedItem) && <div class="w-full h-full">
-						<Item item={pickedItem()} client={props.client} />
-						<Countdown percent={countdownPercent()} seconds={countdownSeconds()} class="absolute z-20 right-4 top-4" />
-					</div>}
+					{isDef(pickedItem) && (
+						<div class="w-full h-full">
+							<div
+								class="flex items-center justify-between mx-60 h-20"
+							>
+								<Button class="flex flex-col justify-center items-center font-bold" onclick={setPreviousItem}>
+									<p>{"< Previous"}</p>
+									<p>{isDef(previousItem) ? previousItem().title : "-"}</p>
+								</Button>
+								<div>
+									<p class="text-center font-bold text-lg">
+										{pickedItem().title}
+									</p>
+									<a
+										class="text-center underline text-yellow-100 block"
+										href={pickedItem().link}
+									>
+										Visit
+									</a>
+								</div>
+								<Button class="flex flex-col justify-center items-center font-bold" onclick={setNextItem}>
+									<p>{"Next >"}</p>
+									<p>{isDef(nextItem) ? nextItem().title : "-"}</p>
+								</Button>
+							</div>
+							<Item item={pickedItem()} client={props.client} />
+							<div class="absolute z-20 right-4 top-4 flex flex-row items-center">
+								<div class="flex flex-col mr-2 items-end">
+									<Button onclick={pauseOrResume} class="mr-2">{state() === "running" ? "Pause" : "Resume"}</Button>
+								</div>
+								<Countdown percent={countdownPercent()} seconds={countdownSeconds()} />
+							</div>
+						</div>
+					)}
 				</Match>
-
 			</Switch>
 		</div>
 	);
 };
 
 export default List;
+
