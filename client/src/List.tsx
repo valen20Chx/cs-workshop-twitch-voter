@@ -262,6 +262,7 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 									<a
 										class="text-center underline text-yellow-100 block"
 										href={pickedItem().link}
+										target="_blank" rel="noreferrer"
 									>
 										Visit
 									</a>
