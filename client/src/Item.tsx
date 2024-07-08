@@ -7,9 +7,8 @@ import {
 } from "solid-js";
 
 import { format } from "date-fns";
-import type tmi from "tmi.js";
 
-import { getClosestMatchingQuality, type Qualities } from "./Qualities";
+import type { Qualities } from "./Qualities";
 import VoteCount from "./VoteCount";
 import type { WorkshopItem } from "./Scraper";
 
@@ -17,46 +16,12 @@ const formatDate = (date: Date): string => {
 	return format(date, "yyyy-MM-dd");
 };
 
-const initVotes: Record<keyof typeof Qualities, number> = {
-	Consumer_grade: 0,
-	Industrial_grade: 0,
-	Mil_spec: 0,
-	Restricted: 0,
-	Classified: 0,
-	Covert: 0,
-}
-
-const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
+const Item: Component<{ item: WorkshopItem, votes: Record<keyof typeof Qualities, number> }> = (props) => {
 	const [lastLink, setLastLink] = createSignal<string | undefined>(undefined);
 	const [currentImageDisplayed, setCurrentImageDisplayed] = createSignal(1);
-	const [votes, setVotes] = createSignal<Record<keyof typeof Qualities, number>>(initVotes);
 
 	const maxVote = createMemo(() => {
-		return Math.max(...Object.values(votes()))
-	});
-
-	// Reset on skin change
-	createEffect(() => {
-		if (props.item.link) {
-			setVotes(initVotes);
-
-		}
-	});
-
-	// Chat
-	createEffect(() => {
-		props.client.on("message", (_channel, _userState, message, _client) => {
-			const chatWords = message.toLowerCase().split(" ");
-
-			const closestMatch = getClosestMatchingQuality(chatWords);
-
-			if (closestMatch) {
-				setVotes({
-					...votes(),
-					[closestMatch]: votes()[closestMatch] + 1,
-				});
-			}
-		});
+		return Math.max(...Object.values(props.votes))
 	});
 
 	// Slide show
@@ -83,6 +48,7 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 			if (sliderEle) sliderEle.style.transform = "";
 		}
 	});
+
 	return (
 		<div>
 			<main
@@ -119,7 +85,7 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 					<div class="p-2 flex gap-4 w-full">
 						<div class="w-64">
 							<p class="font-bold">Authors</p>
-							{props.item.authors.map(author => <a class="flex mt-4 gap-2 items-center hover:bg-blue-900" href={author.link}>
+							{props.item.authors.map(author => <a class="flex mt-4 gap-2 items-center hover:bg-blue-900" href={author.link} target="_blank" rel="noreferrer" >
 								<img src={author.imgSrc} alt={`author ${author.name}`} />
 								<p>
 									{author.name}
@@ -142,7 +108,7 @@ const Item: Component<{ item: WorkshopItem, client: tmi.Client }> = (props) => {
 
 					<div class="w-full">
 						<p class="font-bold">Votes (Write in chat to vote)</p>
-						<VoteCount votes={votes()} maxVote={maxVote()} />
+						<VoteCount votes={props.votes} maxVote={maxVote()} />
 					</div>
 				</div>
 			</main>

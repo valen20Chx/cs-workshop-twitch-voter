@@ -39,13 +39,13 @@ const App: Component = () => {
 	}
 
 	return (
-		<div class="h-screen w-screen bg-blue-950 text-white aspect-video">
+		<div class="">
 			<Switch fallback={"Dev is shiet. Should not happen"}>
 				<Match when={state() === State.ready}>
 					{isDef(twitchClient) && <List client={twitchClient()} />}
 				</Match>
 				<Match when={state() === State.new}>
-					<div class="h-full flex flex-col justify-center items-center center">
+					<div class="h-screen w-screen bg-blue-950 text-white aspect-video flex flex-col justify-center items-center center">
 						<p class="font-bold">Twich channel</p>
 						<input type="text" class="text-black p-1" autofocus onchange={(text) => setChannelName(text.target.value)} />
 						<button onclick={() => loginToChat()} type="button" class="mt-2 bg-blue-400 text-blue-950 p-1 font-bold rounded hover:bg-blue-500">Start</button>

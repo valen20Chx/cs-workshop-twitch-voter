@@ -6,8 +6,12 @@ import { isDef } from "./helpers";
 import Item from "./Item";
 import Button from "./Button";
 import Countdown from "./Countdown";
+import { getClosestMatchingQuality, InitVotes, type Qualities } from "./Qualities";
+import _ from "lodash";
+import type { ChatUserstate } from "tmi.js";
+import Summary from "./Summary";
 
-const SWAP_ITEM_INTERVAL = 10 * 1000;
+const SWAP_ITEM_INTERVAL = 20 * 1000;
 
 const loadList = async (): Promise<WorkshopItem[]> => {
 	const shortItems = await scrapeWorkshopList();
@@ -67,6 +71,16 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 
 	const [state, setState] = createSignal<"initializing" | "paused" | "running" | "completed">("initializing");
 
+	const [allVotes, setAllVotes] = createSignal<Array<Record<keyof typeof Qualities, number>>>(new Array());
+	const [userVotes, setUserVotes] = createSignal<Map<string, keyof typeof Qualities>>(new Map());
+
+	const votes = createMemo(() => {
+		return [...(userVotes().values())].reduce((votesCount, vote) => {
+			votesCount[vote] = votesCount[vote] + 1;
+			return votesCount;
+		}, _.clone(InitVotes))
+	});
+
 	const [items] = createResource<WorkshopItem[]>(loadList);
 
 	const pickedItem = createMemo<WorkshopItem | undefined>(() => {
@@ -88,6 +102,46 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 			return items().at(pickedItemIndex() + 1);
 		}
 		return undefined;
+	});
+
+	createEffect(() => {
+		if (isDef(items)) {
+			setAllVotes(new Array(items().length).fill(0).map(() => _.clone(InitVotes)));
+		}
+	});
+
+	// Chat
+	createEffect(() => {
+		const fn = (_channel: unknown, user: ChatUserstate, message: string, _client: unknown) => {
+			const userId = user["user-id"];
+
+			if (!userId) {
+				return;
+			}
+
+			const chatWords = message.toLowerCase().split(" ");
+
+			const closestMatch = getClosestMatchingQuality(chatWords);
+
+
+			if (closestMatch) {
+				setUserVotes(userVotes => {
+					userVotes.set(userId, closestMatch);
+					return new Map(userVotes);
+				});
+				setAllVotes(allVotes => {
+					allVotes[pickedItemIndex()][closestMatch] = allVotes[pickedItemIndex()][closestMatch] + 1;
+
+					return _.clone(allVotes);
+				});
+			}
+		};
+
+		props.client.on("message", fn);
+
+		onCleanup(() => {
+			props.client.removeListener("message", fn);
+		});
 	});
 
 	const updateCountdown = () => {
@@ -139,6 +193,13 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 		}
 	});
 
+	createEffect(() => {
+		if (state() === "completed") {
+			stopSwapItemInterval();
+		}
+
+	});
+
 	onCleanup(() => {
 		clearInterval(countdownInterval);
 		stopSwapItemInterval();
@@ -174,15 +235,17 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 	};
 
 	return (
-		<div class="w-full h-full flex flex-row items-center justify-center">
-			<Switch>
-				<Match when={items.loading}>
+		<Switch>
+			<Match when={items.loading}>
+				<div class="h-screen w-screen bg-blue-950 text-white aspect-video  flex flex-row items-center justify-center">
 					<p class="font-bold text-xl">Loading...</p>
-				</Match>
-				<Match when={state() === "completed"}>
-					<p class="font-bold text-xl">Completed</p>
-				</Match>
-				<Match when={isDef(pickedItem)}>
+				</div>
+			</Match>
+			<Match when={state() === "completed"}>
+				{isDef(items) && <Summary items={items()} votes={allVotes()} />}
+			</Match>
+			<Match when={isDef(pickedItem)}>
+				<div class="h-screen w-screen bg-blue-950 text-white aspect-video flex flex-row items-center justify-center">
 					{isDef(pickedItem) && (
 						<div class="w-full h-full">
 							<div
@@ -208,7 +271,7 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 									<p>{isDef(nextItem) ? nextItem().title : "-"}</p>
 								</Button>
 							</div>
-							<Item item={pickedItem()} client={props.client} />
+							<Item item={pickedItem()} votes={votes()} />
 							<div class="absolute z-20 right-4 top-4 flex flex-row items-center">
 								<div class="flex flex-col mr-2 items-end">
 									<Button onclick={pauseOrResume} class="mr-2">{state() === "running" ? "Pause" : "Resume"}</Button>
@@ -217,9 +280,9 @@ const List: Component<{ client: tmi.Client }> = (props) => {
 							</div>
 						</div>
 					)}
-				</Match>
-			</Switch>
-		</div>
+				</div>
+			</Match>
+		</Switch>
 	);
 };
 

@@ -65,3 +65,13 @@ export const getClosestMatchingQuality = (chatWords: string[]): QualityKey | und
 
 	return undefined;
 }
+
+export const InitVotes: Record<keyof typeof Qualities, number> = {
+	Consumer_grade: 0,
+	Industrial_grade: 0,
+	Mil_spec: 0,
+	Restricted: 0,
+	Classified: 0,
+	Covert: 0,
+}
+
